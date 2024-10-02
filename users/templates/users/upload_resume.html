@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mr-2 ml-2" >
+  <div class="max-w-2xl mx-auto p-6 bg-white shadow-md rounded mt-5 mt-10 ">
+    <h1>Upload Resume</h1>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="text-blue-800" type="submit">Upload</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
