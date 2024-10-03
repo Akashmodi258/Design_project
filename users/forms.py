@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import User, Resume
+from .models import User
 from django.contrib.auth import get_user_model
 
 class UserRegistrationForm(UserCreationForm):
@@ -13,10 +13,7 @@ class LoginForm(AuthenticationForm):
     
     
     
-class ResumeForm(forms.ModelForm):
-    class Meta:
-        model = Resume
-        fields = ['file']
+
 
 
 User = get_user_model()

@@ -54,7 +54,7 @@ MIDDLEWARE = [
 ]
 
 AUTH_USER_MODEL = 'users.User'
-ROOT_URLCONF = 'YourHR.urls'
+ROOT_URLCONF = 'DTM.urls'
 
 TEMPLATES = [
     {
@@ -72,7 +72,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'YourHR.wsgi.application'
+WSGI_APPLICATION = 'DTM.wsgi.application'
 
 
 # Database

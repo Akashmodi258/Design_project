@@ -1,15 +1,14 @@
 import face_recognition
-import cv2
 import numpy as np
 from io import BytesIO
-from PIL import Image
+from PIL import Image as PILImage
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from .forms import UserRegistrationForm, LoginForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .forms import ResumeForm, UserUpdateForm
-from .models import Resume, User
+from .forms import  UserUpdateForm
+from .models import  User
 from django.http import FileResponse, Http404
 from django.contrib.auth import get_user_model
 
@@ -19,43 +18,32 @@ def register(request):
         if form.is_valid():
             profile_photo = request.FILES['profile_photo']
 
-            # Convert the uploaded image to 8-bit gray using OpenCV
+            # Check for valid image formats
+            if profile_photo.content_type not in ['image/jpeg', 'image/png', 'image/bmp']:
+                messages.error(request, "Unsupported image format. Please upload a JPEG, PNG, or BMP image.")
+                return render(request, 'users/register.html', {'form': form})
+
+            # Convert the uploaded image to grayscale using PIL
             try:
-                # Read the image using OpenCV
-                img = cv2.imdecode(np.fromstring(profile_photo.read(), np.uint8), cv2.IMREAD_COLOR)
-
-                # Convert to grayscale
-                gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-                # Convert back to RGB format for face recognition
-                rgb_img = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
-
-                # Save the image into a BytesIO object for face recognition
-                img_io = BytesIO()
-                _, buffer = cv2.imencode('.jpg', rgb_img)
-                img_io.write(buffer)
-                img_io.seek(0)
-
-                # Load the image for face recognition
-                new_user_image = face_recognition.load_image_file(img_io)
-
+                img_data = BytesIO(profile_photo.read())
+                new_user_image = PILImage.open(img_data).convert('RGB')  # Convert to RGB for face recognition
+                
+                # Convert the image to a NumPy array for face_recognition
+                image_np = np.array(new_user_image)
+                new_user_encoding = face_recognition.face_encodings(image_np)[0]
+            except IndexError:
+                messages.error(request, "Unable to detect a face in the photo. Please upload a clear photo.")
+                return render(request, 'users/register.html', {'form': form})
             except Exception as e:
                 messages.error(request, f"Error processing the image: {str(e)}")
                 return render(request, 'users/register.html', {'form': form})
 
-            # Detect face encodings
-            try:
-                new_user_encoding = face_recognition.face_encodings(new_user_image)[0]
-            except IndexError:
-                messages.error(request, "Unable to detect a face in the photo. Please upload a clear photo.")
-                return render(request, 'users/register.html', {'form': form})
-            
             # Check if this face already exists in the database
             for user in User.objects.all():
                 if user.profile_photo:
                     existing_user_image = face_recognition.load_image_file(user.profile_photo.path)
                     existing_user_encoding = face_recognition.face_encodings(existing_user_image)
-                    
+
                     if existing_user_encoding:
                         result = face_recognition.compare_faces([existing_user_encoding[0]], new_user_encoding)
                         if result[0]:
@@ -72,15 +60,16 @@ def register(request):
         form = UserRegistrationForm()
 
     return render(request, 'users/register.html', {'form': form})
+
 def user_login(request):
     if request.method == 'POST':
         form = LoginForm(data=request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
-            
+
             user = authenticate(request, email=email, password=password)
-            
+
             if user is not None:
                 login(request, user)
                 return redirect('dashboard')  
@@ -97,86 +86,35 @@ def user_logout(request):
     logout(request)
     return redirect('home')
 
-
 @login_required
 def dashboard(request):
     user = request.user
-    try:
-        resume = Resume.objects.get(user=user)
-    except Resume.DoesNotExist:
-        resume = None
 
     if request.method == 'POST':
         if 'delete_account' in request.POST:
             user.delete()
             messages.success(request, 'Your account has been deleted.')
-            return redirect('home')  # Redirect to home or another page
+            return redirect('home')  
         elif 'update_profile' in request.POST:
             form = UserUpdateForm(request.POST, request.FILES, instance=user)
             if form.is_valid():
                 form.save()
                 messages.success(request, 'Your profile has been updated!')
-                return redirect('dashboard')  # Redirect to dashboard or another page
+                return redirect('dashboard')  
 
     form = UserUpdateForm(instance=user)
     
     context = {
-        'resume': resume,
         'form': form,
     }
     return render(request, 'dashboard.html', context)
+
 
 def home(request):
     return render(request, 'users/home.html')
 
 
-
-@login_required
-def upload_resume(request):
-    if request.method == 'POST':
-        form = ResumeForm(request.POST, request.FILES)
-        if form.is_valid():
-            resume, created = Resume.objects.get_or_create(user=request.user)
-            resume.file = form.cleaned_data['file']
-            resume.save()
-            return redirect('dashboard')  # Redirect to dashboard or another appropriate page
-    else:
-        form = ResumeForm()
-    return render(request, 'users/upload_resume.html', {'form': form})
-
-@login_required
-def update_resume(request):
-    resume = get_object_or_404(Resume, user=request.user)
-    if request.method == 'POST':
-        form = ResumeForm(request.POST, request.FILES, instance=resume)
-        if form.is_valid():
-            form.save()
-            return redirect('dashboard')
-    else:
-        form = ResumeForm(instance=resume)
-    return render(request, 'users/update_resume.html', {'form': form})
-
-@login_required
-def delete_resume(request):
-    resume = get_object_or_404(Resume, user=request.user)
-    if request.method == 'POST':
-        resume.delete()
-        return redirect('dashboard')
-    return render(request, 'users/confirm_delete_resume.html', {'resume': resume})
-
-
-@login_required
-def download_resume(request):
-    resume = get_object_or_404(Resume, user=request.user)
-    file_path = resume.file.path
-    try:
-        return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=resume.file.name)
-    except FileNotFoundError:
-        raise Http404("Resume file not found")
     
-    
-    
-
 User = get_user_model()
 
 @login_required

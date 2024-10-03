@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,14 +12,14 @@
 
     {% include 'users/navbar.html' %}
 
-    <main class="py-6">
+    <main class="py-6 bg-[url({% static 'bg/bg.jpg' %})] bg-cover bg-center min-h-screen">
         {% block content %}
         {% endblock %}
     </main>
 
     <footer class="bg-white shadow py-4 mt-10 mt-10 ml-3 mr-3">
         <div class="container mx-auto px-6 text-center">
-            <p class="text-gray-700">© 2024 YourHR. All rights reserved.</p>
+            <p class="text-gray-700">© 2024 DTM. All rights reserved.</p>
         </div>
     </footer>
 

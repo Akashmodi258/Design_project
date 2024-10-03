@@ -120,8 +120,30 @@
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(file);
                 imageField.files = dataTransfer.files;
+                console.log(file.type);
             });
     });
+    function checkIfRGB() {
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+  
+      // Check the pixel data
+      for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];     // Red channel
+          const g = data[i + 1]; // Green channel
+          const b = data[i + 2]; // Blue channel
+          const a = data[i + 3]; // Alpha channel
+  
+          // You can add checks for the RGB values if needed
+          // Example: Check if RGB values are within expected ranges (0-255)
+          if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+              console.log("Not an RGB image");
+              return;
+          }
+      }
+  
+      console.log("The captured image is in RGB format");
+  }
 </script>
   
 {% endblock %}
