@@ -1,3 +1,3 @@
 Install dlib(dlib-19.22.99-cp39-cp39-win_amd64.whl) after installing cmake 
-pip install "path of (dlib in your system)
+pip install ("path of dlib in your system")
 After this go for installation of face_recognition library
